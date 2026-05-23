@@ -95,6 +95,20 @@ label.tool-btn   { cursor: pointer; }
   outline: none; cursor: text; line-height: 1.5;
 }
 
+/* ── Note resize handle ──────────────────────────────────────────── */
+.note-resize {
+  position: absolute; bottom: 0; right: 0;
+  width: 18px; height: 18px;
+  cursor: se-resize; z-index: 8;
+  opacity: 0; transition: opacity 0.15s;
+  /* three diagonal grip lines */
+  background-image:
+    linear-gradient(135deg, transparent 4px, rgba(0,0,0,0.28) 4px, rgba(0,0,0,0.28) 6px, transparent 6px),
+    linear-gradient(135deg, transparent 8px, rgba(0,0,0,0.28) 8px, rgba(0,0,0,0.28) 10px, transparent 10px),
+    linear-gradient(135deg, transparent 12px, rgba(0,0,0,0.28) 12px, rgba(0,0,0,0.28) 14px, transparent 14px);
+}
+.note:hover .note-resize { opacity: 1; }
+
 /* ── Image cards ─────────────────────────────────────────────────── */
 .img-card {
   position: absolute; cursor: grab; background: #fff;
@@ -424,6 +438,7 @@ let idCtr     = 0, connCtr = 0;
 let conns     = [], history = [];
 let strStart  = null;
 let dragging  = null, dragOffX = 0, dragOffY = 0;
+let resizing  = null, resizeStartX = 0, resizeStartY = 0, resizeStartW = 0, resizeStartH = 0;
 let painting  = false, paintX = 0, paintY = 0;
 let ctxTarget = null;
 
@@ -550,7 +565,9 @@ function makeNote(x, y, text = '') {
   const pin = pinEl(noteColor);
   const del = delBtn(() => removeItem(id));
   const ta  = document.createElement('textarea'); ta.placeholder = 'Type here…'; ta.value = text;
-  el.append(pin, del, ta);
+  const rh  = document.createElement('div'); rh.className = 'note-resize';
+  rh.addEventListener('mousedown', e => startResize(e, el));
+  el.append(pin, del, ta, rh);
   wire(el); itemsEl.appendChild(el); history.push(id);
   setTimeout(() => ta.focus(), 40);
   return el;
@@ -938,6 +955,12 @@ function startDrag(el, cx, cy) {
 }
 
 document.addEventListener('mousemove', e => {
+  if (resizing) {
+    resizing.style.width  = Math.max(130, resizeStartW + (e.clientX - resizeStartX)) + 'px';
+    resizing.style.height = Math.max(90,  resizeStartH + (e.clientY - resizeStartY)) + 'px';
+    updateConns();
+    return;
+  }
   if (dragging) {
     const br = board.getBoundingClientRect();
     dragging.style.left = (e.clientX - br.left - dragOffX) + 'px';
@@ -951,9 +974,16 @@ document.addEventListener('mousemove', e => {
     tempLine.setAttribute('stroke', strColor); tempLine.setAttribute('stroke-width','2'); tempLine.setAttribute('opacity','0.75');
   }
 });
-document.addEventListener('mouseup', () => { if (dragging) stopDrag(); });
+document.addEventListener('mouseup', () => { if (resizing) resizing = null; if (dragging) stopDrag(); });
 document.addEventListener('touchmove',  e => { if (dragging && e.touches.length===1) { e.preventDefault(); const br=board.getBoundingClientRect(); dragging.style.left=(e.touches[0].clientX-br.left-dragOffX)+'px'; dragging.style.top=(e.touches[0].clientY-br.top-dragOffY)+'px'; updateConns(); } }, {passive:false});
 document.addEventListener('touchend',   () => { if (dragging) stopDrag(); });
+
+function startResize(e, el) {
+  e.preventDefault(); e.stopPropagation();
+  resizing = el;
+  resizeStartX = e.clientX; resizeStartY = e.clientY;
+  resizeStartW = el.offsetWidth; resizeStartH = el.offsetHeight;
+}
 
 function stopDrag() {
   const rot = parseFloat(dragging.dataset.rot || 0);
