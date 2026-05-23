@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bulletin Board</title>
+<!-- PDF.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -17,7 +19,7 @@ body {
   user-select: none;
 }
 
-/* ── Toolbar ───────────────────────────────────────────────────────── */
+/* ── Toolbar ────────────────────────────────────────────────────────── */
 #toolbar {
   background: #1a0f0a;
   padding: 6px 12px;
@@ -30,261 +32,382 @@ body {
   flex-wrap: wrap;
   min-height: 48px;
 }
-
 .tool-group {
-  display: flex;
-  gap: 4px;
-  align-items: center;
+  display: flex; gap: 4px; align-items: center;
   padding: 0 8px;
   border-right: 1px solid #5c3a1e;
 }
 .tool-group:last-child { border-right: none; }
-
 .tool-btn {
-  background: #3d2010;
-  border: 1px solid #7a4a20;
-  color: #e8c87a;
-  padding: 5px 11px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 13px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  transition: all 0.12s;
-  white-space: nowrap;
+  background: #3d2010; border: 1px solid #7a4a20; color: #e8c87a;
+  padding: 5px 11px; border-radius: 6px; cursor: pointer; font-size: 13px;
+  display: flex; align-items: center; gap: 5px;
+  transition: all 0.12s; white-space: nowrap;
 }
-.tool-btn:hover { background: #5c3a1e; border-color: #e8c87a; }
+.tool-btn:hover  { background: #5c3a1e; border-color: #e8c87a; }
 .tool-btn.active { background: #e8c87a; color: #1a0f0a; border-color: #e8c87a; font-weight: 600; }
-
-.sep { width: 1px; height: 24px; background: #5c3a1e; margin: 0 2px; }
-
+label.tool-btn   { cursor: pointer; }
 .color-dot {
-  width: 19px; height: 19px;
-  border-radius: 50%;
-  border: 2px solid rgba(255,255,255,0.25);
-  cursor: pointer;
-  transition: transform 0.12s;
-  flex-shrink: 0;
+  width: 19px; height: 19px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.25); cursor: pointer;
+  transition: transform 0.12s; flex-shrink: 0;
 }
-.color-dot:hover { transform: scale(1.25); }
+.color-dot:hover  { transform: scale(1.25); }
 .color-dot.active { border-color: white; transform: scale(1.2); box-shadow: 0 0 0 2px rgba(255,255,255,0.4); }
-
 .str-swatch {
-  width: 26px; height: 13px;
-  border-radius: 4px;
-  border: 2px solid rgba(255,255,255,0.25);
-  cursor: pointer;
+  width: 26px; height: 13px; border-radius: 4px;
+  border: 2px solid rgba(255,255,255,0.25); cursor: pointer;
   transition: transform 0.12s;
 }
-.str-swatch:hover { transform: scaleY(1.3); }
+.str-swatch:hover  { transform: scaleY(1.3); }
 .str-swatch.active { border-color: white; }
-
 #draw-size { width: 72px; accent-color: #e8c87a; cursor: pointer; }
 
-label.tool-btn { cursor: pointer; }
-
-/* ── Board ─────────────────────────────────────────────────────────── */
+/* ── Board ──────────────────────────────────────────────────────────── */
 #board {
-  position: relative;
-  flex: 1;
-  overflow: hidden;
+  position: relative; flex: 1; overflow: hidden;
   background-color: #c4935a;
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0.3'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.18'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0.3'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.18'/%3E%3C/svg%3E");
   cursor: default;
 }
-
-/* subtle cork grain overlay */
 #board::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image: repeating-linear-gradient(
-    45deg,
-    transparent,
-    transparent 3px,
-    rgba(0,0,0,0.015) 3px,
-    rgba(0,0,0,0.015) 6px
-  );
-  pointer-events: none;
-  z-index: 0;
+  content: ''; position: absolute; inset: 0;
+  background-image: repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(0,0,0,0.015) 3px, rgba(0,0,0,0.015) 6px);
+  pointer-events: none; z-index: 0;
 }
 
-/* ── Layers ────────────────────────────────────────────────────────── */
+/* ── Layers ─────────────────────────────────────────────────────────── */
 #strings-svg {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%;
-  pointer-events: none;
-  z-index: 2;
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  pointer-events: none; z-index: 2;
 }
-
 #draw-canvas {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%;
-  z-index: 3;
-  pointer-events: none;
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  z-index: 3; pointer-events: none;
 }
 #draw-canvas.draw-active  { pointer-events: all; cursor: crosshair; }
 #draw-canvas.erase-active { pointer-events: all; cursor: cell; }
+#items-layer { position: absolute; inset: 0; z-index: 4; }
 
-#items-layer {
-  position: absolute; inset: 0;
-  z-index: 4;
+/* ── Shared item helpers ────────────────────────────────────────────── */
+.pushpin {
+  position: absolute; top: -11px; left: 50%; transform: translateX(-50%);
+  width: 20px; height: 20px; border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.35);
+  z-index: 5; pointer-events: none;
 }
+.pushpin::after {
+  content: ''; position: absolute; bottom: -9px; left: 50%; transform: translateX(-50%);
+  width: 3px; height: 9px; background: linear-gradient(#aaa, #777);
+  border-radius: 0 0 2px 2px;
+}
+.del-btn {
+  position: absolute; top: 3px; right: 5px;
+  background: none; border: none; color: rgba(0,0,0,0.28);
+  font-size: 17px; cursor: pointer; line-height: 1; padding: 2px 3px; z-index: 6;
+}
+.del-btn:hover { color: rgba(0,0,0,0.7); }
 
-/* ── Sticky Notes ──────────────────────────────────────────────────── */
+/* ── Sticky Notes ───────────────────────────────────────────────────── */
 .note {
-  position: absolute;
-  min-width: 140px; min-height: 110px;
-  width: 180px;
-  padding: 26px 10px 10px;
-  border-radius: 2px;
-  cursor: grab;
+  position: absolute; min-width: 140px; min-height: 110px; width: 180px;
+  padding: 26px 10px 10px; border-radius: 2px; cursor: grab;
   box-shadow: 3px 3px 10px rgba(0,0,0,0.35), inset 0 -2px 4px rgba(0,0,0,0.08);
-  overflow: visible;
   transition: box-shadow 0.12s;
 }
-.note:hover { box-shadow: 5px 5px 18px rgba(0,0,0,0.45); }
+.note:hover    { box-shadow: 5px 5px 18px rgba(0,0,0,0.45); }
 .note.dragging { cursor: grabbing; box-shadow: 8px 8px 28px rgba(0,0,0,0.55); z-index: 200 !important; }
 .note.conn-start { outline: 3px solid #ff5555; outline-offset: 3px; }
 .note.conn-hover  { outline: 3px dashed #ffcc00; outline-offset: 3px; }
-
 .note textarea {
-  width: 100%;
-  height: calc(100% - 10px);
-  min-height: 72px;
+  width: 100%; height: calc(100% - 10px); min-height: 72px;
   border: none; background: transparent; resize: none;
-  font-family: inherit; font-size: 13.5px;
-  color: rgba(0,0,0,0.75);
-  outline: none; cursor: text;
-  line-height: 1.5;
+  font-family: inherit; font-size: 13.5px; color: rgba(0,0,0,0.75);
+  outline: none; cursor: text; line-height: 1.5;
 }
 
-/* ── Image cards ───────────────────────────────────────────────────── */
+/* ── Image cards ────────────────────────────────────────────────────── */
 .img-card {
-  position: absolute;
-  cursor: grab;
-  background: #fff;
+  position: absolute; cursor: grab; background: #fff;
   padding: 8px 8px 28px;
-  box-shadow: 4px 4px 14px rgba(0,0,0,0.4);
-  overflow: visible;
-  transition: box-shadow 0.12s;
+  box-shadow: 4px 4px 14px rgba(0,0,0,0.4); transition: box-shadow 0.12s;
 }
-.img-card:hover { box-shadow: 6px 6px 20px rgba(0,0,0,0.5); }
+.img-card:hover    { box-shadow: 6px 6px 20px rgba(0,0,0,0.5); }
 .img-card.dragging { cursor: grabbing; z-index: 200 !important; }
 .img-card.conn-start { outline: 3px solid #ff5555; outline-offset: 3px; }
 .img-card.conn-hover  { outline: 3px dashed #ffcc00; outline-offset: 3px; }
 .img-card img { display: block; max-width: 260px; max-height: 240px; width: 100%; object-fit: contain; pointer-events: none; }
 
-/* ── Text labels ───────────────────────────────────────────────────── */
+/* ── Text labels ────────────────────────────────────────────────────── */
 .txt-label {
-  position: absolute;
-  cursor: grab;
-  font-size: 22px; font-weight: 700;
-  color: #1a0700;
-  text-shadow: 1px 1px 3px rgba(255,255,255,0.6);
-  padding: 2px 6px;
-  overflow: visible;
+  position: absolute; cursor: grab;
+  font-size: 22px; font-weight: 700; color: #1a0700;
+  text-shadow: 1px 1px 3px rgba(255,255,255,0.6); padding: 2px 6px;
 }
 .txt-label.dragging { cursor: grabbing; z-index: 200 !important; }
 .txt-label.conn-start { outline: 3px solid #ff5555; outline-offset: 3px; }
 .txt-label input {
   background: transparent; border: none;
   border-bottom: 2px solid rgba(0,0,0,0.35);
-  font: inherit; outline: none;
-  min-width: 50px; width: 120px;
-  color: inherit;
+  font: inherit; outline: none; min-width: 50px; width: 120px; color: inherit;
 }
 
-/* ── Shared: pushpin ───────────────────────────────────────────────── */
-.pushpin {
-  position: absolute;
-  top: -11px; left: 50%;
-  transform: translateX(-50%);
-  width: 20px; height: 20px;
-  border-radius: 50%;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.35);
-  z-index: 5;
-  cursor: pointer;
-  pointer-events: none;
-}
-.pushpin::after {
-  content: '';
-  position: absolute;
-  bottom: -9px; left: 50%;
-  transform: translateX(-50%);
-  width: 3px; height: 9px;
-  background: linear-gradient(#aaa, #777);
-  border-radius: 0 0 2px 2px;
-}
-
-/* ── Shared: × delete btn ──────────────────────────────────────────── */
-.del-btn {
-  position: absolute;
-  top: 3px; right: 5px;
-  background: none; border: none;
-  color: rgba(0,0,0,0.28); font-size: 17px;
-  cursor: pointer; line-height: 1; padding: 2px 3px;
-  z-index: 6;
-}
-.del-btn:hover { color: rgba(0,0,0,0.7); }
-
-/* ── Tape ──────────────────────────────────────────────────────────── */
+/* ── Tape ───────────────────────────────────────────────────────────── */
 .tape {
-  position: absolute;
+  position: absolute; cursor: grab;
   background: rgba(255,255,210,0.52);
   border: 1px solid rgba(200,200,140,0.4);
-  cursor: grab;
-  /* faint lines to look like tape */
-  background-image: repeating-linear-gradient(
-    90deg, transparent, transparent 4px,
-    rgba(200,200,150,0.12) 4px, rgba(200,200,150,0.12) 5px
-  );
+  background-image: repeating-linear-gradient(90deg, transparent, transparent 4px, rgba(200,200,150,0.12) 4px, rgba(200,200,150,0.12) 5px);
 }
 .tape.dragging { cursor: grabbing; z-index: 200 !important; }
 
-/* ── Drop overlay ──────────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════════════
+   DOCUMENT STACK
+   ══════════════════════════════════════════════════════════════════════ */
+.doc-stack {
+  position: absolute;
+  width: 148px;
+  cursor: grab;
+  transition: filter 0.15s;
+}
+.doc-stack:hover { filter: brightness(1.06); }
+.doc-stack:hover .paper-front { box-shadow: 5px 5px 18px rgba(0,0,0,0.5); }
+.doc-stack.dragging { cursor: grabbing; z-index: 200 !important; }
+.doc-stack.conn-start { outline: 3px solid #ff5555; outline-offset: 6px; }
+.doc-stack.conn-hover  { outline: 3px dashed #ffcc00; outline-offset: 6px; }
+
+/* back sheets */
+.paper-sheet {
+  position: absolute; left: 0;
+  width: 132px; height: 172px;
+  border-radius: 2px 2px 1px 1px;
+  box-shadow: 2px 3px 8px rgba(0,0,0,0.28);
+}
+.paper-sheet:nth-child(1) { background: #e8e2d8; transform: rotate(-5deg) translate(-3px, 4px); }
+.paper-sheet:nth-child(2) { background: #ede8df; transform: rotate(-2.5deg) translate(-1.5px, 2px); }
+
+/* front visible sheet */
+.paper-front {
+  position: relative;
+  width: 132px; height: 172px;
+  background: #fff;
+  border-radius: 2px 2px 1px 1px;
+  box-shadow: 3px 4px 12px rgba(0,0,0,0.38);
+  display: flex; flex-direction: column;
+  align-items: center;
+  padding: 10px 8px 8px;
+  overflow: hidden;
+  transition: box-shadow 0.12s;
+}
+
+/* lines on paper-front to mimic ruled paper */
+.paper-front::before {
+  content: '';
+  position: absolute; left: 0; right: 0; top: 0; bottom: 0;
+  background-image: repeating-linear-gradient(
+    transparent, transparent 17px, rgba(160,190,255,0.25) 17px, rgba(160,190,255,0.25) 18px
+  );
+  background-position: 0 28px;
+  pointer-events: none;
+}
+
+/* red margin line */
+.paper-front::after {
+  content: '';
+  position: absolute; left: 22px; top: 0; bottom: 0;
+  width: 1px;
+  background: rgba(255,100,100,0.22);
+  pointer-events: none;
+}
+
+.doc-thumb {
+  width: 112px; height: 108px;
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 2px;
+  overflow: hidden;
+  background: #f7f5f0;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  margin-bottom: 6px;
+  position: relative; z-index: 1;
+}
+.doc-thumb canvas, .doc-thumb img { width: 100%; height: 100%; object-fit: contain; }
+.doc-thumb .doc-type-icon {
+  font-size: 36px; line-height: 1;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+}
+.doc-thumb .doc-type-icon span { font-size: 10px; font-weight: 700; letter-spacing: 1px; color: #666; }
+
+.doc-name {
+  font-size: 10.5px; font-weight: 600; color: #333;
+  text-align: center; line-height: 1.3;
+  word-break: break-word;
+  max-height: 32px; overflow: hidden;
+  position: relative; z-index: 1;
+}
+.doc-meta {
+  font-size: 9px; color: #888; margin-top: 2px;
+  position: relative; z-index: 1;
+}
+
+/* "click to open" hint badge */
+.doc-open-hint {
+  position: absolute;
+  bottom: 5px; left: 0; right: 0;
+  text-align: center;
+  font-size: 9px; color: rgba(0,0,0,0.35);
+  pointer-events: none;
+  letter-spacing: 0.3px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   VIEWER OVERLAY
+   ══════════════════════════════════════════════════════════════════════ */
+#viewer {
+  position: fixed; inset: 0; z-index: 99999;
+  background: rgba(10, 6, 3, 0.92);
+  display: flex; flex-direction: column;
+  align-items: center;
+  opacity: 0; pointer-events: none;
+  transform: scale(0.04);
+  transform-origin: 50% 50%;
+  transition: transform 0.32s cubic-bezier(0.34, 1.42, 0.64, 1), opacity 0.22s ease;
+  will-change: transform, opacity;
+}
+#viewer.open {
+  opacity: 1; pointer-events: all;
+  transform: scale(1);
+}
+
+#viewer-bar {
+  width: 100%; background: #1a0f0a;
+  border-bottom: 1px solid #5c3a1e;
+  padding: 10px 20px;
+  display: flex; align-items: center; gap: 12px;
+  flex-shrink: 0;
+}
+#viewer-title {
+  flex: 1; color: #e8c87a; font-size: 15px; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#viewer-meta { color: #888; font-size: 12px; flex-shrink: 0; }
+#viewer-dl {
+  background: #3d2010; border: 1px solid #7a4a20; color: #e8c87a;
+  padding: 4px 12px; border-radius: 6px; cursor: pointer; font-size: 12px;
+  text-decoration: none; flex-shrink: 0;
+  display: flex; align-items: center; gap: 4px;
+}
+#viewer-dl:hover { background: #5c3a1e; }
+#viewer-close {
+  background: none; border: none; color: #e8c87a; font-size: 26px;
+  cursor: pointer; line-height: 1; padding: 0 4px; flex-shrink: 0;
+  transition: color 0.12s;
+}
+#viewer-close:hover { color: #fff; }
+
+#viewer-scroll {
+  flex: 1; width: 100%; overflow-y: auto;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 28px 20px 60px;
+  gap: 20px;
+}
+
+/* PDF pages in viewer */
+.viewer-page {
+  background: #fff;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.6);
+  border-radius: 2px;
+  max-width: 100%;
+  display: block;
+}
+
+/* Text content in viewer */
+#viewer-text {
+  background: #fff; color: #222;
+  padding: 40px 48px;
+  border-radius: 4px;
+  max-width: 780px; width: 100%;
+  font-family: 'Courier New', monospace; font-size: 14px; line-height: 1.7;
+  white-space: pre-wrap; word-break: break-word;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.6);
+  min-height: 200px;
+}
+
+/* CSV / structured data */
+#viewer-table-wrap {
+  max-width: 100%; overflow-x: auto;
+  background: #fff; border-radius: 4px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.6);
+}
+#viewer-table {
+  border-collapse: collapse; font-size: 13px; color: #222;
+  background: #fff;
+}
+#viewer-table th {
+  background: #f0ede5; font-weight: 700; color: #333;
+  padding: 8px 14px; border: 1px solid #ddd; white-space: nowrap;
+}
+#viewer-table td {
+  padding: 6px 14px; border: 1px solid #eee; white-space: nowrap;
+}
+#viewer-table tr:nth-child(even) td { background: #fafaf7; }
+
+/* Image in viewer */
+#viewer-img {
+  max-width: 90vw; max-height: 80vh; width: auto; height: auto;
+  border-radius: 3px;
+  box-shadow: 0 4px 32px rgba(0,0,0,0.7);
+  display: block;
+}
+
+/* Unsupported */
+#viewer-unsupported {
+  color: #aaa; text-align: center; padding: 60px 20px;
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+}
+#viewer-unsupported .big-icon { font-size: 64px; }
+
+/* Loading spinner */
+.viewer-spinner {
+  width: 42px; height: 42px; margin: 60px auto;
+  border: 4px solid rgba(255,255,255,0.15);
+  border-top-color: #e8c87a;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Drop overlay ───────────────────────────────────────────────────── */
 #drop-overlay {
   position: absolute; inset: 0;
   background: rgba(0,0,0,0.32);
   display: flex; align-items: center; justify-content: center;
   color: #fff; font-size: 30px; font-weight: 600;
-  z-index: 900;
-  pointer-events: none;
+  z-index: 900; pointer-events: none;
   opacity: 0; transition: opacity 0.18s;
 }
 #drop-overlay.show { opacity: 1; }
 
-/* ── Hint bar ──────────────────────────────────────────────────────── */
+/* ── Hint bar ───────────────────────────────────────────────────────── */
 #hint {
-  position: absolute;
-  bottom: 14px; left: 50%; transform: translateX(-50%);
-  background: rgba(0,0,0,0.62);
-  color: #fff; padding: 5px 16px;
-  border-radius: 20px; font-size: 13px;
+  position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+  background: rgba(0,0,0,0.62); color: #fff;
+  padding: 5px 16px; border-radius: 20px; font-size: 13px;
   pointer-events: none; z-index: 800;
-  opacity: 0; transition: opacity 0.25s;
-  white-space: nowrap;
+  opacity: 0; transition: opacity 0.25s; white-space: nowrap;
 }
 #hint.show { opacity: 1; }
 
-/* ── Context menu ──────────────────────────────────────────────────── */
+/* ── Context menu ───────────────────────────────────────────────────── */
 #ctx-menu {
-  position: fixed;
-  background: #1a0f0a;
-  border: 1px solid #7a4a20;
-  border-radius: 8px;
-  padding: 4px 0;
-  z-index: 9999;
-  display: none;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
-  min-width: 140px;
+  position: fixed; background: #1a0f0a;
+  border: 1px solid #7a4a20; border-radius: 8px;
+  padding: 4px 0; z-index: 9999; display: none;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5); min-width: 150px;
 }
 #ctx-menu.show { display: block; }
 .ctx-item {
-  padding: 7px 16px;
-  color: #e8c87a; font-size: 13px; cursor: pointer;
+  padding: 7px 16px; color: #e8c87a; font-size: 13px; cursor: pointer;
   display: flex; align-items: center; gap: 8px;
 }
 .ctx-item:hover { background: #3d2010; }
@@ -294,36 +417,31 @@ label.tool-btn { cursor: pointer; }
 </head>
 <body>
 
-<!-- ─────────────────────── TOOLBAR ─────────────────────────────── -->
+<!-- ──────────────────────── TOOLBAR ───────────────────────────────── -->
 <div id="toolbar">
 
   <div class="tool-group">
-    <button class="tool-btn active" id="btn-select" onclick="setMode('select')" title="Select & move items (V)">↖ Select</button>
+    <button class="tool-btn active" id="btn-select" onclick="setMode('select')" title="Select & move (V)">↖ Select</button>
   </div>
 
   <div class="tool-group">
-    <button class="tool-btn" id="btn-note"  onclick="setMode('note')"  title="Add sticky note (N)">📝 Note</button>
-    <button class="tool-btn" id="btn-text"  onclick="setMode('text')"  title="Add text label (T)">𝐓 Text</button>
-    <button class="tool-btn" id="btn-tape"  onclick="placeTape()"      title="Add tape strip">📎 Tape</button>
-    <label  class="tool-btn"                                            title="Add image from file (I)">
-      🖼 Image
-      <input type="file" id="file-input" accept="image/*" style="display:none" onchange="handleFile(event)">
-    </label>
+    <button class="tool-btn" id="btn-note" onclick="setMode('note')"  title="Sticky note (N)">📝 Note</button>
+    <button class="tool-btn" id="btn-text" onclick="setMode('text')"  title="Text label (T)">𝐓 Text</button>
+    <button class="tool-btn" id="btn-tape" onclick="placeTape()"      title="Add tape">📎 Tape</button>
   </div>
 
   <!-- Note colour swatches -->
-  <div class="tool-group" id="note-colors" title="Sticky note colour">
+  <div class="tool-group" id="note-colors" title="Note colour">
     <div class="color-dot active" style="background:#ffd966" onclick="pickNoteColor('#ffd966',this)"></div>
     <div class="color-dot"        style="background:#ff9e9e" onclick="pickNoteColor('#ff9e9e',this)"></div>
     <div class="color-dot"        style="background:#9effd5" onclick="pickNoteColor('#9effd5',this)"></div>
     <div class="color-dot"        style="background:#9ed4ff" onclick="pickNoteColor('#9ed4ff',this)"></div>
     <div class="color-dot"        style="background:#e8a0ff" onclick="pickNoteColor('#e8a0ff',this)"></div>
-    <div class="color-dot"        style="background:#ffffff" onclick="pickNoteColor('#ffffff',this)" style="border-color:#888"></div>
+    <div class="color-dot"        style="background:#ffffff" onclick="pickNoteColor('#ffffff',this)"></div>
   </div>
 
   <div class="tool-group">
-    <button class="tool-btn" id="btn-string" onclick="setMode('string')" title="Connect items with string (S)">🧵 String</button>
-    <!-- String colour swatches -->
+    <button class="tool-btn" id="btn-string" onclick="setMode('string')" title="Connect with string (S)">🧵 String</button>
     <div class="str-swatch active" style="background:#cc3333" onclick="pickStrColor('#cc3333',this)" title="Red"></div>
     <div class="str-swatch"        style="background:#3355cc" onclick="pickStrColor('#3355cc',this)" title="Blue"></div>
     <div class="str-swatch"        style="background:#eeeeee" onclick="pickStrColor('#eeeeee',this)" title="White"></div>
@@ -333,8 +451,8 @@ label.tool-btn { cursor: pointer; }
   </div>
 
   <div class="tool-group">
-    <button class="tool-btn" id="btn-draw"  onclick="setMode('draw')"  title="Draw / sketch (D)">✏️ Draw</button>
-    <button class="tool-btn" id="btn-erase" onclick="setMode('erase')" title="Erase drawing (E)">🧹 Erase</button>
+    <button class="tool-btn" id="btn-draw"  onclick="setMode('draw')"  title="Draw (D)">✏️ Draw</button>
+    <button class="tool-btn" id="btn-erase" onclick="setMode('erase')" title="Erase (E)">🧹 Erase</button>
     <div style="display:flex;gap:3px">
       <div class="color-dot active" style="background:#222"    onclick="pickDrawColor('#222222',this)"></div>
       <div class="color-dot"        style="background:#cc3333" onclick="pickDrawColor('#cc3333',this)"></div>
@@ -344,16 +462,28 @@ label.tool-btn { cursor: pointer; }
       <div class="color-dot"        style="background:#ffffff" onclick="pickDrawColor('#ffffff',this)"></div>
     </div>
     <input type="range" id="draw-size" min="1" max="32" value="3" title="Brush size">
-    <button class="tool-btn" onclick="clearCanvas()" title="Clear all drawing">✕ Clear</button>
+    <button class="tool-btn" onclick="clearCanvas()">✕ Clear</button>
+  </div>
+
+  <!-- File / Image uploads -->
+  <div class="tool-group">
+    <label class="tool-btn" title="Add image (I)">
+      🖼 Image
+      <input type="file" id="img-input" accept="image/*" style="display:none" onchange="handleImgInput(event)">
+    </label>
+    <label class="tool-btn" title="Import file — PDF, text, CSV, code… (F)">
+      📁 File
+      <input type="file" id="file-input" accept="*/*" style="display:none" onchange="handleDocInput(event)">
+    </label>
   </div>
 
   <div class="tool-group">
-    <button class="tool-btn" onclick="undoLast()" title="Undo last item (Ctrl+Z)">↩ Undo</button>
-    <button class="tool-btn" onclick="clearBoard()" title="Clear everything" style="color:#ff9e9e">🗑 Clear all</button>
+    <button class="tool-btn" onclick="undoLast()" title="Undo (Ctrl+Z)">↩ Undo</button>
+    <button class="tool-btn" onclick="clearBoard()" style="color:#ff9e9e">🗑 Clear all</button>
   </div>
 </div>
 
-<!-- ─────────────────────── BOARD ─────────────────────────────────── -->
+<!-- ──────────────────────── BOARD ─────────────────────────────────── -->
 <div id="board">
   <svg id="strings-svg" xmlns="http://www.w3.org/2000/svg">
     <defs>
@@ -366,45 +496,64 @@ label.tool-btn { cursor: pointer; }
   </svg>
   <canvas id="draw-canvas"></canvas>
   <div id="items-layer"></div>
-  <div id="drop-overlay">📌 Drop image here</div>
+  <div id="drop-overlay">📌 Drop file or image here</div>
   <div id="hint"></div>
 </div>
 
-<!-- Context menu -->
+<!-- ──────────────────────── VIEWER ────────────────────────────────── -->
+<div id="viewer">
+  <div id="viewer-bar">
+    <span id="viewer-title">Document</span>
+    <span id="viewer-meta"></span>
+    <a id="viewer-dl" href="#" download title="Download file">⬇ Download</a>
+    <button id="viewer-close" onclick="closeViewer()" title="Close (Escape)">×</button>
+  </div>
+  <div id="viewer-scroll"></div>
+</div>
+
+<!-- ──────────────────────── CONTEXT MENU ──────────────────────────── -->
 <div id="ctx-menu">
   <div class="ctx-item" id="ctx-color"  onclick="ctxChangeColor()">🎨 Change colour</div>
+  <div class="ctx-item" id="ctx-open"   onclick="ctxOpenDoc()">📖 Open / view</div>
   <div class="ctx-item" id="ctx-string" onclick="ctxStartString()">🧵 Connect string</div>
   <div class="ctx-sep"></div>
   <div class="ctx-item danger"          onclick="ctxDelete()">🗑 Delete</div>
 </div>
 
 <script>
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
+//  PDF.js worker
+// ════════════════════════════════════════════════════════
+if (typeof pdfjsLib !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+// ════════════════════════════════════════════════════════
 //  STATE
-// ══════════════════════════════════════════════════════════
-let mode       = 'select';
-let noteColor  = '#ffd966';
-let drawColor  = '#222222';
-let strColor   = '#cc3333';
-let idCounter  = 0;
-let connId     = 0;
-let conns      = [];      // [{id, from, to, color}]
-let history    = [];      // item ids for undo
-let strStart   = null;    // item el waiting for second click
+// ════════════════════════════════════════════════════════
+let mode      = 'select';
+let noteColor = '#ffd966';
+let drawColor = '#222222';
+let strColor  = '#cc3333';
+let idCounter = 0;
+let connId    = 0;
+let conns     = [];
+let history   = [];
+let strStart  = null;
 
-let dragging   = null;
-let dragOffX   = 0, dragOffY = 0;
+let dragging  = null, dragOffX = 0, dragOffY = 0;
+let painting  = false, paintX  = 0, paintY  = 0;
+let ctxTarget = null;
 
-let painting   = false;
-let paintX     = 0, paintY = 0;
+// doc metadata store  { id → { name, type, data, pages, url } }
+const docStore = new Map();
 
-let ctxTarget  = null;    // item el under right-click
-
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 //  DOM REFS
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 const board    = document.getElementById('board');
-const items    = document.getElementById('items-layer');
+const itemsEl  = document.getElementById('items-layer');
 const strsSvg  = document.getElementById('strings-svg');
 const strsG    = document.getElementById('strings-g');
 const tempLine = document.getElementById('temp-line');
@@ -412,10 +561,15 @@ const canvas   = document.getElementById('draw-canvas');
 const ctx2d    = canvas.getContext('2d');
 const hintEl   = document.getElementById('hint');
 const ctxMenu  = document.getElementById('ctx-menu');
+const viewer   = document.getElementById('viewer');
+const vScroll  = document.getElementById('viewer-scroll');
+const vTitle   = document.getElementById('viewer-title');
+const vMeta    = document.getElementById('viewer-meta');
+const vDl      = document.getElementById('viewer-dl');
 
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 //  CANVAS RESIZE
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 function resizeCanvas() {
   const snap = ctx2d.getImageData(0, 0, canvas.width, canvas.height);
   canvas.width  = board.clientWidth;
@@ -425,17 +579,10 @@ function resizeCanvas() {
 resizeCanvas();
 new ResizeObserver(resizeCanvas).observe(board);
 
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 //  MODE
-// ══════════════════════════════════════════════════════════
-const HINTS = {
-  select: '',
-  note:   'Click the board to place a sticky note. Escape to cancel.',
-  text:   'Click the board to place a text label. Escape to cancel.',
-  string: 'Click an item to start a string, then click another item. Escape to cancel.',
-  draw:   'Draw freely. Escape to switch back.',
-  erase:  'Drag to erase drawing. Escape to switch back.',
-};
+// ════════════════════════════════════════════════════════
+const HINTS   = { select:'', note:'Click the board to place a sticky note.', text:'Click the board to add a text label.', string:'Click an item to start a string, then click another. Escape cancels.', draw:'Draw freely. Escape to switch back.', erase:'Drag to erase. Escape to switch back.' };
 const CURSORS = { select:'default', note:'cell', text:'text', string:'crosshair', draw:'crosshair', erase:'cell' };
 
 function setMode(m) {
@@ -449,15 +596,11 @@ function setMode(m) {
   board.style.cursor = CURSORS[m] || 'default';
   showHint(HINTS[m]);
 }
+function showHint(msg) { hintEl.textContent = msg; hintEl.classList.toggle('show', !!msg); }
 
-function showHint(msg) {
-  hintEl.textContent = msg;
-  hintEl.classList.toggle('show', !!msg);
-}
-
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 //  COLOUR PICKERS
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 function pickNoteColor(c, el) {
   noteColor = c;
   document.querySelectorAll('#note-colors .color-dot').forEach(e => e.classList.remove('active'));
@@ -465,7 +608,7 @@ function pickNoteColor(c, el) {
 }
 function pickDrawColor(c, el) {
   drawColor = c;
-  document.querySelectorAll('[onclick^="pickDrawColor"] , [onclick*="pickDrawColor"]').forEach(e => e.classList.remove('active'));
+  document.querySelectorAll('[onclick*="pickDrawColor"]').forEach(e => e.classList.remove('active'));
   el.classList.add('active');
 }
 function pickStrColor(c, el) {
@@ -474,12 +617,12 @@ function pickStrColor(c, el) {
   el.classList.add('active');
 }
 
-// ══════════════════════════════════════════════════════════
-//  BOARD CLICK (create items)
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
+//  BOARD CLICK
+// ════════════════════════════════════════════════════════
 board.addEventListener('mousedown', e => {
   if (e.button !== 0) return;
-  if (e.target !== board && e.target !== items) return;
+  if (e.target !== board && e.target !== itemsEl) return;
   hideCtxMenu();
   const {bx, by} = boardXY(e);
   if (mode === 'note')   makeNote(bx - 90, by - 55);
@@ -487,184 +630,391 @@ board.addEventListener('mousedown', e => {
   if (mode === 'string') cancelStrStart();
 });
 
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 //  KEYBOARD
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 document.addEventListener('keydown', e => {
   const tag = document.activeElement?.tagName;
   const typing = tag === 'TEXTAREA' || tag === 'INPUT';
-  if (e.key === 'Escape')                            setMode('select');
-  if (!typing && e.key === 'n')                      setMode('note');
-  if (!typing && e.key === 't')                      setMode('text');
-  if (!typing && e.key === 's')                      setMode('string');
-  if (!typing && e.key === 'd')                      setMode('draw');
-  if (!typing && e.key === 'e')                      setMode('erase');
-  if (!typing && e.key === 'v')                      setMode('select');
-  if (!typing && e.key === 'i')                      document.getElementById('file-input').click();
+  if (e.key === 'Escape') { if (viewer.classList.contains('open')) closeViewer(); else setMode('select'); }
+  if (!typing && e.key === 'n') setMode('note');
+  if (!typing && e.key === 't') setMode('text');
+  if (!typing && e.key === 's') setMode('string');
+  if (!typing && e.key === 'd') setMode('draw');
+  if (!typing && e.key === 'e') setMode('erase');
+  if (!typing && e.key === 'v') setMode('select');
+  if (!typing && e.key === 'i') document.getElementById('img-input').click();
+  if (!typing && e.key === 'f') document.getElementById('file-input').click();
   if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !typing) undoLast();
 });
 
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 //  STICKY NOTES
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 function makeNote(x, y, text = '') {
   const id = 'i' + (++idCounter);
   const el = document.createElement('div');
   el.className = 'note';
   el.id = id;
-  el.style.cssText = `left:${Math.max(0,x)}px;top:${Math.max(0,y)}px;background:${noteColor};z-index:${idCounter+10}`;
   const rot = (Math.random() - 0.5) * 5;
   el.dataset.rot = rot;
-  el.style.transform = `rotate(${rot}deg)`;
-
+  el.style.cssText = `left:${Math.max(0,x)}px;top:${Math.max(0,y)}px;background:${noteColor};transform:rotate(${rot}deg);z-index:${idCounter+10}`;
   const pin = document.createElement('div');
   pin.className = 'pushpin';
   pin.style.background = `radial-gradient(circle at 38% 35%, ${tintPin(noteColor)}, ${darkPin(noteColor)})`;
-
   const del = document.createElement('button');
-  del.className = 'del-btn';
-  del.textContent = '×';
-  del.title = 'Delete';
-  del.onclick = () => removeItem(id);
-
+  del.className = 'del-btn'; del.textContent = '×'; del.onclick = () => removeItem(id);
   const ta = document.createElement('textarea');
-  ta.placeholder = 'Type here…';
-  ta.value = text;
-
+  ta.placeholder = 'Type here…'; ta.value = text;
   el.append(pin, del, ta);
-  attachDrag(el);
-  attachConnect(el);
-  attachCtxMenu(el);
-  items.appendChild(el);
+  attachDrag(el); attachConnect(el); attachCtxMenu(el);
+  itemsEl.appendChild(el);
   history.push(id);
   setTimeout(() => ta.focus(), 40);
   return el;
 }
+function tintPin(hex) { const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16); return `rgb(${Math.min(255,r+60)},${Math.min(255,g+60)},${Math.min(255,b+60)})`; }
+function darkPin(hex)  { const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16); return `rgb(${Math.max(0,r-60)},${Math.max(0,g-60)},${Math.max(0,b-60)})`; }
 
-function tintPin(hex) {
-  // lighten hex for pin highlight
-  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
-  return `rgb(${Math.min(255,r+60)},${Math.min(255,g+60)},${Math.min(255,b+60)})`;
-}
-function darkPin(hex) {
-  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
-  return `rgb(${Math.max(0,r-60)},${Math.max(0,g-60)},${Math.max(0,b-60)})`;
-}
-
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 //  TEXT LABELS
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 function makeText(x, y, val = '') {
   const id = 'i' + (++idCounter);
   const el = document.createElement('div');
-  el.className = 'txt-label';
-  el.id = id;
+  el.className = 'txt-label'; el.id = id;
   el.style.cssText = `left:${Math.max(0,x)}px;top:${Math.max(0,y)}px;z-index:${idCounter+10}`;
-
   const inp = document.createElement('input');
-  inp.placeholder = 'Label…';
-  inp.value = val;
-  inp.addEventListener('blur', () => { if (!inp.value.trim()) removeItem(id); });
-  inp.addEventListener('input', () => {
-    inp.style.width = Math.max(50, inp.value.length * 13 + 20) + 'px';
-    updateConns();
-  });
-
+  inp.placeholder = 'Label…'; inp.value = val;
+  inp.addEventListener('blur',  () => { if (!inp.value.trim()) removeItem(id); });
+  inp.addEventListener('input', () => { inp.style.width = Math.max(50, inp.value.length * 13 + 20) + 'px'; updateConns(); });
   el.appendChild(inp);
-  attachDrag(el);
-  attachConnect(el);
-  attachCtxMenu(el);
-  items.appendChild(el);
+  attachDrag(el); attachConnect(el); attachCtxMenu(el);
+  itemsEl.appendChild(el);
   history.push(id);
   setTimeout(() => inp.focus(), 40);
   return el;
 }
 
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 //  IMAGE CARDS
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 function makeImage(x, y, src) {
   const id = 'i' + (++idCounter);
   const el = document.createElement('div');
-  el.className = 'img-card';
-  el.id = id;
+  el.className = 'img-card'; el.id = id;
   const rot = (Math.random() - 0.5) * 7;
   el.dataset.rot = rot;
   el.style.cssText = `left:${Math.max(0,x-80)}px;top:${Math.max(0,y-80)}px;transform:rotate(${rot}deg);z-index:${idCounter+10}`;
-
   const pin = document.createElement('div');
   pin.className = 'pushpin';
   pin.style.background = 'radial-gradient(circle at 38% 35%, #aaa, #555)';
-
   const del = document.createElement('button');
-  del.className = 'del-btn';
-  del.textContent = '×';
-  del.onclick = () => removeItem(id);
-
+  del.className = 'del-btn'; del.textContent = '×'; del.onclick = () => removeItem(id);
   const img = document.createElement('img');
-  img.src = src;
-  img.draggable = false;
-
+  img.src = src; img.draggable = false;
   el.append(pin, del, img);
-  attachDrag(el);
-  attachConnect(el);
-  attachCtxMenu(el);
-  items.appendChild(el);
+  attachDrag(el); attachConnect(el); attachCtxMenu(el);
+  itemsEl.appendChild(el);
   history.push(id);
   return el;
 }
 
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 //  TAPE
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 function placeTape() {
   const id = 'i' + (++idCounter);
   const el = document.createElement('div');
-  el.className = 'tape';
-  el.id = id;
+  el.className = 'tape'; el.id = id;
   const bw = board.clientWidth, bh = board.clientHeight;
-  const w = 55 + Math.random() * 50;
-  const h = 18 + Math.random() * 10;
+  const w = 55 + Math.random() * 50, h = 18 + Math.random() * 10;
   const x = bw * 0.2 + Math.random() * bw * 0.6 - w / 2;
   const y = bh * 0.2 + Math.random() * bh * 0.5 - h / 2;
   const rot = (Math.random() - 0.5) * 20;
   el.style.cssText = `left:${x}px;top:${y}px;width:${w}px;height:${h}px;transform:rotate(${rot}deg);z-index:${idCounter+10}`;
   el.dataset.rot = rot;
   attachDrag(el);
-  items.appendChild(el);
+  itemsEl.appendChild(el);
   history.push(id);
 }
 
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
+//  DOCUMENT STACKS  ← new feature
+// ════════════════════════════════════════════════════════
+const DOC_ICONS = {
+  pdf:   { emoji: '📄', color: '#e53e3e', label: 'PDF'  },
+  txt:   { emoji: '📝', color: '#3182ce', label: 'TXT'  },
+  md:    { emoji: '📝', color: '#805ad5', label: 'MD'   },
+  csv:   { emoji: '📊', color: '#38a169', label: 'CSV'  },
+  json:  { emoji: '🗂',  color: '#d69e2e', label: 'JSON' },
+  js:    { emoji: '📜', color: '#f6ad55', label: 'JS'   },
+  ts:    { emoji: '📜', color: '#4299e1', label: 'TS'   },
+  html:  { emoji: '🌐', color: '#ed8936', label: 'HTML' },
+  css:   { emoji: '🎨', color: '#9f7aea', label: 'CSS'  },
+  py:    { emoji: '🐍', color: '#48bb78', label: 'PY'   },
+  default: { emoji: '📎', color: '#718096', label: 'FILE' },
+};
+
+function getDocKind(name) {
+  const ext = name.split('.').pop().toLowerCase();
+  if (['jpg','jpeg','png','gif','webp','bmp','svg'].includes(ext)) return 'image';
+  if (ext === 'pdf') return 'pdf';
+  if (['csv'].includes(ext)) return 'csv';
+  if (['txt','md','js','ts','jsx','tsx','html','css','py','rb','go','rs','sh','json','xml','yaml','yml','sql','log'].includes(ext)) return 'text';
+  return 'other';
+}
+
+function getDocIcon(name) {
+  const ext = name.split('.').pop().toLowerCase();
+  return DOC_ICONS[ext] || DOC_ICONS.default;
+}
+
+async function makeDocStack(x, y, file) {
+  const id      = 'i' + (++idCounter);
+  const kind    = getDocKind(file.name);
+  const icon    = getDocIcon(file.name);
+  const pages   = null;
+  const dataURL = null;
+
+  // ── Build DOM ──
+  const el = document.createElement('div');
+  el.className = 'doc-stack'; el.id = id;
+  const rot = (Math.random() - 0.5) * 8;
+  el.dataset.rot = rot;
+  el.style.cssText = `left:${Math.max(0,x-66)}px;top:${Math.max(0,y-86)}px;transform:rotate(${rot}deg);z-index:${idCounter+10}`;
+
+  const sheet1 = document.createElement('div'); sheet1.className = 'paper-sheet';
+  const sheet2 = document.createElement('div'); sheet2.className = 'paper-sheet';
+  const front  = document.createElement('div'); front.className  = 'paper-front';
+
+  // pushpin
+  const pin = document.createElement('div');
+  pin.className = 'pushpin';
+  pin.style.background = `radial-gradient(circle at 38% 35%, ${icon.color}cc, ${icon.color})`;
+
+  // delete button
+  const del = document.createElement('button');
+  del.className = 'del-btn'; del.textContent = '×'; del.onclick = e => { e.stopPropagation(); removeItem(id); };
+
+  // thumb placeholder
+  const thumb = document.createElement('div');
+  thumb.className = 'doc-thumb';
+
+  const iconDiv = document.createElement('div');
+  iconDiv.className = 'doc-type-icon';
+  iconDiv.innerHTML = `${icon.emoji}<span>${icon.label}</span>`;
+  thumb.appendChild(iconDiv);
+
+  // name + meta
+  const nameDiv = document.createElement('div');
+  nameDiv.className = 'doc-name';
+  nameDiv.textContent = file.name;
+
+  const metaDiv = document.createElement('div');
+  metaDiv.className = 'doc-meta';
+  metaDiv.textContent = fmtSize(file.size);
+
+  const openHint = document.createElement('div');
+  openHint.className = 'doc-open-hint';
+  openHint.textContent = 'click to open';
+
+  front.append(thumb, nameDiv, metaDiv, openHint);
+  el.append(sheet1, sheet2, front, pin, del);
+
+  // click opens viewer (not drag)
+  front.addEventListener('click', e => {
+    if (dragging) return;
+    openViewer(id, el);
+  });
+
+  attachDrag(el); attachConnect(el); attachCtxMenu(el);
+  itemsEl.appendChild(el);
+  history.push(id);
+
+  // ── Read file data ──
+  const entry = { name: file.name, kind, icon, size: file.size, pdfDoc: null, text: null, dataURL: null, pages: 0 };
+  docStore.set(id, entry);
+
+  if (kind === 'pdf') {
+    const ab = await file.arrayBuffer();
+    entry.ab = ab;
+    try {
+      const pdfDoc = await pdfjsLib.getDocument({data: ab.slice(0)}).promise;
+      entry.pdfDoc = pdfDoc;
+      entry.pages  = pdfDoc.numPages;
+      metaDiv.textContent = `${fmtSize(file.size)} · ${pdfDoc.numPages} page${pdfDoc.numPages!==1?'s':''}`;
+      // render thumbnail (page 1, small)
+      const page     = await pdfDoc.getPage(1);
+      const vp       = page.getViewport({scale: 0.28});
+      const tc       = document.createElement('canvas');
+      tc.width = vp.width; tc.height = vp.height;
+      await page.render({canvasContext: tc.getContext('2d'), viewport: vp}).promise;
+      thumb.innerHTML = '';
+      thumb.appendChild(tc);
+    } catch(err) { console.warn('PDF render error', err); }
+  } else if (kind === 'text' || kind === 'csv') {
+    entry.text = await file.text();
+    // show first few lines as thumb
+    const lines = entry.text.split('\n').slice(0, 9).join('\n');
+    const pre = document.createElement('pre');
+    pre.style.cssText = 'font-size:6px;line-height:1.4;color:#333;white-space:pre-wrap;word-break:break-all;padding:3px;text-align:left;width:100%;';
+    pre.textContent = lines;
+    thumb.innerHTML = '';
+    thumb.appendChild(pre);
+  } else if (kind === 'image') {
+    const url = await readAsDataURL(file);
+    entry.dataURL = url;
+    const img = document.createElement('img');
+    img.src = url; img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+    thumb.innerHTML = '';
+    thumb.appendChild(img);
+  } else {
+    // other: create blob URL for download
+    entry.blobURL = URL.createObjectURL(file);
+  }
+
+  // store blob URL for download
+  if (!entry.blobURL) {
+    if (entry.dataURL)   entry.blobURL = entry.dataURL;
+    else if (entry.text) entry.blobURL = URL.createObjectURL(new Blob([entry.text], {type:'text/plain'}));
+    else if (entry.ab)   entry.blobURL = URL.createObjectURL(new Blob([entry.ab]));
+  }
+
+  return el;
+}
+
+function fmtSize(bytes) {
+  if (bytes < 1024)       return bytes + ' B';
+  if (bytes < 1024*1024)  return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/1024/1024).toFixed(1) + ' MB';
+}
+
+function readAsDataURL(file) {
+  return new Promise(res => { const r = new FileReader(); r.onload = e => res(e.target.result); r.readAsDataURL(file); });
+}
+
+// ════════════════════════════════════════════════════════
+//  VIEWER
+// ════════════════════════════════════════════════════════
+let viewerOpen = false;
+
+async function openViewer(itemId, stackEl) {
+  const entry = docStore.get(itemId);
+  if (!entry) return;
+
+  // Zoom origin = center of the stack card
+  const r = stackEl.getBoundingClientRect();
+  const ox = ((r.left + r.width  / 2) / window.innerWidth  * 100).toFixed(1) + '%';
+  const oy = ((r.top  + r.height / 2) / window.innerHeight * 100).toFixed(1) + '%';
+  viewer.style.transformOrigin = `${ox} ${oy}`;
+
+  vTitle.textContent = entry.name;
+  vMeta.textContent  = entry.pages ? `${entry.pages} pages · ${fmtSize(entry.size)}` : fmtSize(entry.size);
+  vDl.href     = entry.blobURL || '#';
+  vDl.download = entry.name;
+  vDl.style.display = entry.blobURL ? '' : 'none';
+
+  vScroll.innerHTML = '';
+
+  if (entry.kind === 'pdf') {
+    // Show spinner while loading
+    const spin = document.createElement('div'); spin.className = 'viewer-spinner';
+    vScroll.appendChild(spin);
+    viewer.classList.add('open');
+    viewerOpen = true;
+
+    try {
+      const pdfDoc = entry.pdfDoc || await pdfjsLib.getDocument({data: entry.ab.slice(0)}).promise;
+      vScroll.innerHTML = '';
+      const scale   = Math.min(2.2, (window.innerWidth * 0.82) / 612);
+      for (let p = 1; p <= pdfDoc.numPages; p++) {
+        const page = await pdfDoc.getPage(p);
+        const vp   = page.getViewport({scale});
+        const c    = document.createElement('canvas');
+        c.className = 'viewer-page';
+        c.width = vp.width; c.height = vp.height;
+        vScroll.appendChild(c);
+        await page.render({canvasContext: c.getContext('2d'), viewport: vp}).promise;
+      }
+    } catch(err) {
+      vScroll.innerHTML = `<div style="color:#ff8a8a;padding:40px">Error rendering PDF: ${err.message}</div>`;
+    }
+
+  } else if (entry.kind === 'csv') {
+    viewer.classList.add('open'); viewerOpen = true;
+    const rows = entry.text.trim().split('\n').map(r => r.split(',').map(c => c.trim().replace(/^"|"$/g,'')));
+    const wrap  = document.createElement('div'); wrap.id = 'viewer-table-wrap';
+    const table = document.createElement('table'); table.id = 'viewer-table';
+    rows.forEach((cells, ri) => {
+      const tr = document.createElement('tr');
+      cells.forEach(cell => {
+        const td = document.createElement(ri === 0 ? 'th' : 'td');
+        td.textContent = cell; tr.appendChild(td);
+      });
+      table.appendChild(tr);
+    });
+    wrap.appendChild(table); vScroll.appendChild(wrap);
+
+  } else if (entry.kind === 'text') {
+    viewer.classList.add('open'); viewerOpen = true;
+    const pre = document.createElement('pre'); pre.id = 'viewer-text';
+    pre.textContent = entry.text;
+    vScroll.appendChild(pre);
+
+  } else if (entry.kind === 'image') {
+    viewer.classList.add('open'); viewerOpen = true;
+    const img = document.createElement('img'); img.id = 'viewer-img';
+    img.src = entry.dataURL;
+    vScroll.appendChild(img);
+
+  } else {
+    viewer.classList.add('open'); viewerOpen = true;
+    const div = document.createElement('div'); div.id = 'viewer-unsupported';
+    div.innerHTML = `<div class="big-icon">${entry.icon.emoji}</div><p style="color:#ccc;font-size:16px">${entry.name}</p><p style="color:#888">Preview not available for this file type.</p>`;
+    if (entry.blobURL) div.innerHTML += `<a href="${entry.blobURL}" download="${entry.name}" style="color:#e8c87a;font-size:14px;margin-top:8px">⬇ Download file</a>`;
+    vScroll.appendChild(div);
+  }
+}
+
+function closeViewer() {
+  viewer.classList.remove('open');
+  viewerOpen = false;
+  setTimeout(() => { vScroll.innerHTML = ''; }, 320);
+}
+
+viewer.addEventListener('click', e => {
+  if (e.target === viewer) closeViewer();
+});
+
+// ════════════════════════════════════════════════════════
 //  DRAG
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 function attachDrag(el) {
-  el.addEventListener('mousedown', onDragStart);
+  el.addEventListener('mousedown',  onDragStart);
   el.addEventListener('touchstart', onTouchStart, {passive: true});
 }
 
 function onDragStart(e) {
   if (mode === 'string') return;
-  if (['TEXTAREA','INPUT','BUTTON'].includes(e.target.tagName)) return;
+  if (['TEXTAREA','INPUT','BUTTON','A'].includes(e.target.tagName)) return;
+  // Don't drag when clicking paper-front (that opens viewer)
+  if (e.target.closest('.paper-front')) return;
   if (e.button !== 0) return;
   e.preventDefault();
   startDrag(e.currentTarget, e.clientX, e.clientY);
 }
-
 function startDrag(el, cx, cy) {
   dragging = el;
-  const r = el.getBoundingClientRect();
-  dragOffX = cx - r.left;
-  dragOffY = cy - r.top;
+  const r  = el.getBoundingClientRect();
+  dragOffX = cx - r.left; dragOffY = cy - r.top;
   el.classList.add('dragging');
   el.style.zIndex = 500;
   el.style.transform = 'rotate(0deg)';
 }
 
 document.addEventListener('mousemove', e => {
-  if (dragging) {
-    moveDragging(e.clientX, e.clientY);
-  }
+  if (dragging) moveDragging(e.clientX, e.clientY);
   if (mode === 'string' && strStart) {
     const {bx, by} = boardXY(e);
     const c = center(strStart);
@@ -675,20 +1025,13 @@ document.addEventListener('mousemove', e => {
     tempLine.setAttribute('opacity', '0.75');
   }
 });
-
 function moveDragging(cx, cy) {
   const br = board.getBoundingClientRect();
-  const x = cx - br.left - dragOffX;
-  const y = cy - br.top  - dragOffY;
-  dragging.style.left = x + 'px';
-  dragging.style.top  = y + 'px';
+  dragging.style.left = (cx - br.left - dragOffX) + 'px';
+  dragging.style.top  = (cy - br.top  - dragOffY) + 'px';
   updateConns();
 }
-
-document.addEventListener('mouseup', e => {
-  if (dragging) stopDrag();
-});
-
+document.addEventListener('mouseup', () => { if (dragging) stopDrag(); });
 function stopDrag() {
   const rot = parseFloat(dragging.dataset.rot || 0);
   dragging.style.transform = `rotate(${rot}deg)`;
@@ -697,65 +1040,38 @@ function stopDrag() {
   dragging = null;
   updateConns();
 }
-
-// Touch
-function onTouchStart(e) {
-  if (e.touches.length === 1) {
-    const t = e.touches[0];
-    startDrag(e.currentTarget, t.clientX, t.clientY);
-  }
-}
-document.addEventListener('touchmove', e => {
-  if (dragging && e.touches.length === 1) {
-    e.preventDefault();
-    moveDragging(e.touches[0].clientX, e.touches[0].clientY);
-  }
-}, {passive: false});
+function onTouchStart(e) { if (e.touches.length === 1) startDrag(e.currentTarget, e.touches[0].clientX, e.touches[0].clientY); }
+document.addEventListener('touchmove', e => { if (dragging && e.touches.length === 1) { e.preventDefault(); moveDragging(e.touches[0].clientX, e.touches[0].clientY); } }, {passive: false});
 document.addEventListener('touchend', () => { if (dragging) stopDrag(); });
 
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 //  STRING CONNECTIONS
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 function attachConnect(el) {
   el.addEventListener('click', onConnClick);
   el.addEventListener('mouseenter', () => { if (mode==='string' && strStart && strStart!==el) el.classList.add('conn-hover'); });
   el.addEventListener('mouseleave', () => el.classList.remove('conn-hover'));
 }
-
 function onConnClick(e) {
   if (mode !== 'string') return;
   e.stopPropagation();
   const el = e.currentTarget;
   el.classList.remove('conn-hover');
-  if (!strStart) {
-    strStart = el;
-    el.classList.add('conn-start');
-    showHint('Now click another item to connect. Escape to cancel.');
-  } else if (strStart === el) {
-    cancelStrStart();
-    showHint(HINTS.string);
-  } else {
-    addConn(strStart.id, el.id, strColor);
-    cancelStrStart();
-    showHint(HINTS.string);
-  }
+  if (!strStart) { strStart = el; el.classList.add('conn-start'); showHint('Now click another item. Escape cancels.'); }
+  else if (strStart === el) { cancelStrStart(); showHint(HINTS.string); }
+  else { addConn(strStart.id, el.id, strColor); cancelStrStart(); showHint(HINTS.string); }
 }
-
 function cancelStrStart() {
   if (strStart) { strStart.classList.remove('conn-start'); strStart = null; }
   tempLine.setAttribute('stroke', 'transparent');
 }
-
 function addConn(fromId, toId, color) {
   const id = 'c' + (++connId);
   conns.push({id, from: fromId, to: toId, color});
-
   const path = document.createElementNS('http://www.w3.org/2000/svg','path');
   path.id = id;
-  path.setAttribute('stroke', color);
-  path.setAttribute('stroke-width', '2.5');
-  path.setAttribute('fill', 'none');
-  path.setAttribute('filter', 'url(#str-shadow)');
+  path.setAttribute('stroke', color); path.setAttribute('stroke-width', '2.5');
+  path.setAttribute('fill', 'none'); path.setAttribute('filter', 'url(#str-shadow)');
   path.style.cursor = 'pointer';
   path.addEventListener('click', () => removeConn(id));
   path.addEventListener('mouseenter', () => path.setAttribute('stroke-width','4'));
@@ -763,159 +1079,117 @@ function addConn(fromId, toId, color) {
   strsG.appendChild(path);
   updateConns();
 }
-
-function removeConn(id) {
-  conns = conns.filter(c => c.id !== id);
-  document.getElementById(id)?.remove();
-}
-
+function removeConn(id) { conns = conns.filter(c => c.id !== id); document.getElementById(id)?.remove(); }
 function center(el) {
-  const br = board.getBoundingClientRect();
-  const er = el.getBoundingClientRect();
+  const br = board.getBoundingClientRect(), er = el.getBoundingClientRect();
   return { x: er.left - br.left + er.width/2, y: er.top - br.top + er.height/2 };
 }
-
 function updateConns() {
   conns.forEach(c => {
-    const fEl = document.getElementById(c.from);
-    const tEl = document.getElementById(c.to);
-    const pEl = document.getElementById(c.id);
+    const fEl = document.getElementById(c.from), tEl = document.getElementById(c.to), pEl = document.getElementById(c.id);
     if (!fEl || !tEl || !pEl) return;
     const f = center(fEl), t = center(tEl);
-    const dx = t.x - f.x, dy = t.y - f.y;
-    const dist = Math.hypot(dx, dy);
-    const sag = Math.min(dist * 0.22, 90);
-    const mx = (f.x+t.x)/2, my = (f.y+t.y)/2 + sag;
-    pEl.setAttribute('d', `M${f.x} ${f.y} Q${mx} ${my} ${t.x} ${t.y}`);
+    const dist = Math.hypot(t.x-f.x, t.y-f.y);
+    const sag  = Math.min(dist * 0.22, 90);
+    pEl.setAttribute('d', `M${f.x} ${f.y} Q${(f.x+t.x)/2} ${(f.y+t.y)/2+sag} ${t.x} ${t.y}`);
   });
 }
 
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 //  DRAWING
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 canvas.addEventListener('mousedown', e => {
   if (mode !== 'draw' && mode !== 'erase') return;
   painting = true;
   const r = canvas.getBoundingClientRect();
-  paintX = e.clientX - r.left;
-  paintY = e.clientY - r.top;
-  // dot on single click
-  ctx2d.beginPath();
-  ctx2d.arc(paintX, paintY, brushSize()/2, 0, Math.PI*2);
-  setupBrush();
-  ctx2d.fill();
+  paintX = e.clientX - r.left; paintY = e.clientY - r.top;
+  ctx2d.beginPath(); ctx2d.arc(paintX, paintY, brushSize()/2, 0, Math.PI*2); setupBrush(); ctx2d.fill();
 });
-
 canvas.addEventListener('mousemove', e => {
   if (!painting) return;
-  const r  = canvas.getBoundingClientRect();
-  const x  = e.clientX - r.left;
-  const y  = e.clientY - r.top;
-  ctx2d.beginPath();
-  ctx2d.moveTo(paintX, paintY);
-  ctx2d.lineTo(x, y);
-  setupBrush();
-  ctx2d.stroke();
+  const r = canvas.getBoundingClientRect();
+  const x = e.clientX - r.left, y = e.clientY - r.top;
+  ctx2d.beginPath(); ctx2d.moveTo(paintX, paintY); ctx2d.lineTo(x, y); setupBrush(); ctx2d.stroke();
   paintX = x; paintY = y;
 });
-
 function setupBrush() {
   const size = brushSize();
-  if (mode === 'erase') {
-    ctx2d.globalCompositeOperation = 'destination-out';
-    ctx2d.strokeStyle = 'rgba(0,0,0,1)';
-    ctx2d.fillStyle   = 'rgba(0,0,0,1)';
-    ctx2d.lineWidth   = size * 6;
-  } else {
-    ctx2d.globalCompositeOperation = 'source-over';
-    ctx2d.strokeStyle = drawColor;
-    ctx2d.fillStyle   = drawColor;
-    ctx2d.lineWidth   = size;
-  }
-  ctx2d.lineCap  = 'round';
-  ctx2d.lineJoin = 'round';
+  if (mode === 'erase') { ctx2d.globalCompositeOperation='destination-out'; ctx2d.strokeStyle='rgba(0,0,0,1)'; ctx2d.fillStyle='rgba(0,0,0,1)'; ctx2d.lineWidth=size*6; }
+  else { ctx2d.globalCompositeOperation='source-over'; ctx2d.strokeStyle=drawColor; ctx2d.fillStyle=drawColor; ctx2d.lineWidth=size; }
+  ctx2d.lineCap='round'; ctx2d.lineJoin='round';
 }
-
 function brushSize() { return parseInt(document.getElementById('draw-size').value); }
-
 canvas.addEventListener('mouseup',    () => { painting = false; });
 canvas.addEventListener('mouseleave', () => { painting = false; });
-
-// Touch drawing
-canvas.addEventListener('touchstart', e => {
-  if (mode !== 'draw' && mode !== 'erase') return;
-  e.preventDefault();
-  painting = true;
-  const r = canvas.getBoundingClientRect();
-  const t = e.touches[0];
-  paintX = t.clientX - r.left; paintY = t.clientY - r.top;
-}, {passive: false});
-
-canvas.addEventListener('touchmove', e => {
-  if (!painting) return;
-  e.preventDefault();
-  const r = canvas.getBoundingClientRect();
-  const t = e.touches[0];
-  const x = t.clientX - r.left, y = t.clientY - r.top;
-  ctx2d.beginPath(); ctx2d.moveTo(paintX, paintY); ctx2d.lineTo(x, y);
-  setupBrush(); ctx2d.stroke();
-  paintX = x; paintY = y;
-}, {passive: false});
-
+canvas.addEventListener('touchstart', e => { if (mode!=='draw'&&mode!=='erase') return; e.preventDefault(); painting=true; const r=canvas.getBoundingClientRect(),t=e.touches[0]; paintX=t.clientX-r.left; paintY=t.clientY-r.top; }, {passive:false});
+canvas.addEventListener('touchmove',  e => { if (!painting) return; e.preventDefault(); const r=canvas.getBoundingClientRect(),t=e.touches[0],x=t.clientX-r.left,y=t.clientY-r.top; ctx2d.beginPath(); ctx2d.moveTo(paintX,paintY); ctx2d.lineTo(x,y); setupBrush(); ctx2d.stroke(); paintX=x; paintY=y; }, {passive:false});
 canvas.addEventListener('touchend', () => { painting = false; });
-
 function clearCanvas() { ctx2d.clearRect(0, 0, canvas.width, canvas.height); }
 
-// ══════════════════════════════════════════════════════════
-//  IMAGE UPLOAD / DROP
-// ══════════════════════════════════════════════════════════
-function handleFile(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  readImage(file, board.clientWidth/2, board.clientHeight/2);
+// ════════════════════════════════════════════════════════
+//  FILE HANDLERS
+// ════════════════════════════════════════════════════════
+function handleImgInput(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const r = new FileReader();
+  r.onload = ev => makeImage(board.clientWidth/2, board.clientHeight/2, ev.target.result);
+  r.readAsDataURL(file); e.target.value = '';
+}
+
+function handleDocInput(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const kind = getDocKind(file.name);
+  if (kind === 'image') {
+    const r = new FileReader();
+    r.onload = ev => makeImage(board.clientWidth/2, board.clientHeight/2, ev.target.result);
+    r.readAsDataURL(file);
+  } else {
+    makeDocStack(board.clientWidth/2, board.clientHeight/2, file);
+  }
   e.target.value = '';
 }
 
-function readImage(file, x, y) {
-  const r = new FileReader();
-  r.onload = ev => makeImage(x, y, ev.target.result);
-  r.readAsDataURL(file);
-}
-
+// Drag-drop onto board
 board.addEventListener('dragover',  e => { e.preventDefault(); document.getElementById('drop-overlay').classList.add('show'); });
 board.addEventListener('dragleave', e => { if (!board.contains(e.relatedTarget)) document.getElementById('drop-overlay').classList.remove('show'); });
 board.addEventListener('drop', e => {
   e.preventDefault();
   document.getElementById('drop-overlay').classList.remove('show');
   const {bx, by} = boardXY(e);
-  [...e.dataTransfer.files].filter(f => f.type.startsWith('image/')).forEach(f => readImage(f, bx, by));
+  [...e.dataTransfer.files].forEach(file => {
+    const kind = getDocKind(file.name);
+    if (kind === 'image') {
+      const r = new FileReader();
+      r.onload = ev => makeImage(bx, by, ev.target.result);
+      r.readAsDataURL(file);
+    } else {
+      makeDocStack(bx, by, file);
+    }
+  });
   const txt = e.dataTransfer.getData('text/plain');
   if (txt && !e.dataTransfer.files.length) makeNote(bx - 90, by - 55, txt);
 });
 
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 //  CONTEXT MENU
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 function attachCtxMenu(el) {
   el.addEventListener('contextmenu', e => {
-    e.preventDefault();
-    e.stopPropagation();
+    e.preventDefault(); e.stopPropagation();
     ctxTarget = el;
-    // show/hide colour option only for notes
-    document.getElementById('ctx-color').style.display = el.classList.contains('note') ? '' : 'none';
-    ctxMenu.style.left = e.clientX + 'px';
-    ctxMenu.style.top  = e.clientY + 'px';
+    const isNote  = el.classList.contains('note');
+    const isDoc   = el.classList.contains('doc-stack');
+    document.getElementById('ctx-color').style.display  = isNote ? '' : 'none';
+    document.getElementById('ctx-open').style.display   = isDoc  ? '' : 'none';
+    ctxMenu.style.left = e.clientX + 'px'; ctxMenu.style.top = e.clientY + 'px';
     ctxMenu.classList.add('show');
   });
 }
 document.addEventListener('mousedown', e => { if (!ctxMenu.contains(e.target)) hideCtxMenu(); });
 function hideCtxMenu() { ctxMenu.classList.remove('show'); }
-
 function ctxChangeColor() {
   if (!ctxTarget) return;
-  // cycle through note colours
   const cols = ['#ffd966','#ff9e9e','#9effd5','#9ed4ff','#e8a0ff','#ffffff'];
-  const cur  = ctxTarget.style.background;
   const idx  = cols.findIndex(c => ctxTarget.style.background.includes(c.slice(1)));
   const next = cols[(idx + 1) % cols.length];
   ctxTarget.style.background = next;
@@ -923,73 +1197,71 @@ function ctxChangeColor() {
   if (pin) pin.style.background = `radial-gradient(circle at 38% 35%, ${tintPin(next)}, ${darkPin(next)})`;
   hideCtxMenu();
 }
+function ctxOpenDoc() {
+  if (!ctxTarget) return;
+  openViewer(ctxTarget.id, ctxTarget);
+  hideCtxMenu();
+}
 function ctxStartString() {
   if (!ctxTarget) return;
-  setMode('string');
-  strStart = ctxTarget;
-  ctxTarget.classList.add('conn-start');
-  showHint('Now click another item to connect. Escape to cancel.');
-  hideCtxMenu();
+  setMode('string'); strStart = ctxTarget; ctxTarget.classList.add('conn-start');
+  showHint('Now click another item. Escape cancels.'); hideCtxMenu();
 }
 function ctxDelete() { if (ctxTarget) { removeItem(ctxTarget.id); hideCtxMenu(); } }
 
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 //  DELETE / UNDO / CLEAR
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 function removeItem(id) {
-  conns.filter(c => c.from===id || c.to===id).forEach(c => { document.getElementById(c.id)?.remove(); });
+  conns.filter(c => c.from===id || c.to===id).forEach(c => document.getElementById(c.id)?.remove());
   conns = conns.filter(c => c.from!==id && c.to!==id);
   document.getElementById(id)?.remove();
   history = history.filter(h => h !== id);
+  if (docStore.has(id)) {
+    const e = docStore.get(id);
+    if (e.blobURL && e.blobURL.startsWith('blob:')) URL.revokeObjectURL(e.blobURL);
+    docStore.delete(id);
+  }
 }
-
-function undoLast() {
-  if (!history.length) return;
-  removeItem(history[history.length - 1]);
-}
-
+function undoLast() { if (history.length) removeItem(history[history.length - 1]); }
 function clearBoard() {
   if (!confirm('Clear the entire board?')) return;
-  [...items.children].forEach(el => el.remove());
+  [...itemsEl.children].forEach(el => el.remove());
   [...strsG.children].forEach(el => el.remove());
   conns = []; history = [];
+  docStore.forEach(e => { if (e.blobURL?.startsWith('blob:')) URL.revokeObjectURL(e.blobURL); });
+  docStore.clear();
   clearCanvas();
 }
 
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 //  HELPERS
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 function boardXY(e) {
   const r = board.getBoundingClientRect();
-  return { bx: (e.clientX || e.pageX) - r.left, by: (e.clientY || e.pageY) - r.top };
+  return { bx: (e.clientX??e.pageX) - r.left, by: (e.clientY??e.pageY) - r.top };
 }
 
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 //  INITIAL DEMO CONTENT
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 window.addEventListener('load', () => {
-  const W = board.clientWidth  || 900;
-  const H = board.clientHeight || 600;
+  const W = board.clientWidth || 900, H = board.clientHeight || 600;
 
-  const n1 = makeNote(W*0.05, H*0.06, '📌 Welcome to Bulletin Board!');
-  const n2 = makeNote(W*0.54, H*0.04, 'Tips:\n• Drag items anywhere\n• Right-click for options\n• Drop images onto the board\n• Use 🧵 String to connect items\n• Use ✏️ Draw to sketch & annotate\n• Keyboard: N=note T=text S=string D=draw E=erase');
-  const n3 = makeNote(W*0.08, H*0.52, 'Ideas go here…');
-
+  const n1 = makeNote(W*0.05,  H*0.06, '📌 Welcome to Bulletin Board!');
+  const n2 = makeNote(W*0.55,  H*0.04, 'Tips:\n• Drag items anywhere\n• Right-click for options\n• Drop any file onto the board\n• 📁 File imports PDFs, text, CSV…\n• Click a file stack to read it\n• 🧵 String connects items');
+  const n3 = makeNote(W*0.08,  H*0.52, 'Ideas go here…');
   n1.style.background = '#ffd966';
   n2.style.background = '#9ed4ff';
   n3.style.background = '#9effd5';
 
-  // demo tape
+  // demo tape strip
   const tape = document.createElement('div');
   tape.className = 'tape';
-  const tw = 70, th = 22;
-  tape.style.cssText = `left:${W*0.05+55}px;top:${H*0.06-10}px;width:${tw}px;height:${th}px;transform:rotate(-5deg);z-index:20`;
-  items.appendChild(tape);
+  tape.style.cssText = `left:${W*0.05+55}px;top:${H*0.06-10}px;width:70px;height:22px;transform:rotate(-5deg);z-index:20`;
+  itemsEl.appendChild(tape);
 
-  setTimeout(() => {
-    addConn(n1.id, n2.id, '#cc3333');
-    addConn(n1.id, n3.id, '#3355cc');
-  }, 120);
+  setTimeout(() => { addConn(n1.id, n2.id, '#cc3333'); addConn(n1.id, n3.id, '#3355cc'); }, 120);
 });
 </script>
 </body>
